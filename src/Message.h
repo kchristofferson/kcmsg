@@ -15,9 +15,6 @@
 
 namespace kcmsg {
 
-const size_t HEADER_LENGTH = 0x20;
-const size_t MESSAGE_LENGTH_OFFSET = 0x20;
-
 const uint32_t MAX_MSG_DATA = 0xFFFF; // 64K Bytes Maximum Message Data Size
 
 const uint16_t MSG_FLAG_ONCE_AND_ONLY_ONCE = 1<<0;
@@ -26,12 +23,14 @@ const uint16_t MSG_FLAG_FRAGMENT = 1<<2;
 
 struct MessageHeader
 {
-	uint64_t source_ident;          // source endpoint identifier
-	uint64_t target_ident;          // target endpoint identifier
-	uint32_t transaction_organization;   // target organization identifier
-	uint32_t transaction_application;    // target application identifier
-	uint32_t ttl;                   // time to live in seconds
+	uint32_t source_ident;          // source endpoint identifier
+	uint16_t source_organization;   // source organization identifier
+	uint32_t target_ident;          // target endpoint identifier
+	uint16_t target_organization;          // target endpoint identifier
 	uint16_t transaction_ident;     // message type identifier
+	uint16_t transaction_application;    // target application identifier
+	uint16_t transaction_organization;   // target organization identifier
+	uint32_t ttl;                   // time to live in seconds
 	uint16_t flags;
 };
 
@@ -40,29 +39,50 @@ private:
 	char *data;		// complete message (header and data)
 	size_t offset;		// current pointer into the message
 	size_t data_length;	// current length of the complete message
-	uint16_t network_data_length; // value packed into the message
+	kcmsg::MessageHeader hdr;
 
+	void readHeader(void);
+	void writeHeader(void);
+	void updateMessageLength(std::size_t delta);
+
+//	void readMessage(void);
+//	void writeMessage(void);
 // protected:
 
+
+
+
+
+
 public:
-	void setSourceIdentity(uint64_t id);
-	uint64_t getSourceIdentity(void);
-	void setTargetIdentity(uint64_t id);
-	uint64_t getTargetIdentity(void);
-	void setTargetOrganization(uint32_t id);
-	uint32_t getTargetOrganization(void);
-	void setTargetApplication(uint32_t id);
-	uint32_t getTargetApplication(void);
+	Message();
+	virtual ~Message();
+
+	void readMessageLength(void);
+
+	void setSourceIdentifier(uint32_t id);
+	uint32_t getSourceIdentifier(void);
+	void setSourceOrganization(uint16_t id);
+	uint16_t getSourceOrganization(void);
+	void setTargetIdentifier(uint32_t id);
+	uint32_t getTargetIdentifier(void);
+	void setTargetOrganization(uint16_t id);
+	uint16_t getTargetOrganization(void);
+	void setTransactionIdentifier(uint16_t id);
+	uint16_t getTransactionIdentifier(void);
+	void setTransactionApplication(uint16_t id);
+	uint16_t getTransactionApplication(void);
+	void setTransactionOrganization(uint16_t id);
+	uint16_t getTransactionOrganization(void);
 	void setTTL(uint32_t val);
 	uint32_t getTTL(void);
-	void setTransactionIdentity(uint16_t id);
-	uint16_t getTransactionIdentity(void);
 	void setOnceAndOnlyOnce(bool val);
 	bool isOnceAndOnlyOnce(void);
 	void setQuickDeath(bool val);
 	bool isQuickDeath(void);
 	void setMessageFragment(bool val);
 	bool isMessageFragment(void);
+	size_t getMessageLength(void);
 
 	void putBool(bool val);
 	void putByte(int8_t val);
@@ -70,8 +90,8 @@ public:
 	void putInt(int32_t val);
 	void putLong(int32_t val);
 	void putLongLong(int64_t val);
-	void putFloat(int32_t val);
-	void putDouble(int64_t val);
+	void putFloat(float val);
+	void putDouble(double val);
 	void putChar(char val);
 	void putWChar(wchar_t val);
 	void putString(std::string val);
@@ -97,8 +117,8 @@ public:
 	int32_t getInt(void);
 	int32_t getLong(void);
 	int64_t getLongLong(void);
-	int32_t getFloat(void);
-	int64_t getDouble(void);
+	float getFloat(void);
+	double getDouble(void);
 	char getChar(void);
 	wchar_t getWChar(void);
 	std::string getString(void);
@@ -122,16 +142,10 @@ public:
 	*/
 
  // public:
-	Message();
-	virtual ~Message();
 
-	void getHeader(kcmsg::MessageHeader *hdr);
-	size_t getLength(void);
-
-	void message_send(void);
-	void message_serialize(void);
-
-	void debug_print_message_data(void);
+//	void message_send(void);
+	void debugMessageSerialize(std::string fo);
+	void debugMessagePrint(void);
 
 	void updateDataLength(std::size_t delta);
 	void setFlags(uint16_t val);

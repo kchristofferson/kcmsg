@@ -23,35 +23,106 @@ namespace kcmsg {
 
 Configuration::Configuration() {
 
-  boost::filesystem::path scpath("/etc/kcmsg/config.json");
+}
+
+/*
+Configuration::Configuration(std::string progName) {
+	Configuration("/etc/", progName);
+}
+
+Configuration::Configuration(std::string gblDirectory, std::string progName) {
+
+	std::size_t pos;
+	pos = progName.find_last_of("\\/");
+	if( pos != std::string::npos )
+		progName = progName.substr( pos );
+
+	pos = progName.rfind(".");
+	if( pos != std::string::npos )
+		progName = progName.substr(0, pos);
+
+	pos = gblDirectory.rfind("/");
+	if( pos != 0 )
+		gblDirectory.append("/");
+	std::string globalConfig = gblDirectory + progName + "/config.json";
+	std::string userConfig = "/." + progName + "/config.json";
+
+  boost::filesystem::path gcpath(globalConfig);
   struct passwd *pw = getpwuid( getuid() );
   boost::filesystem::path ucpath( pw->pw_dir );
-  ucpath.append("/.kcmsg/config.json");
+  ucpath.append(userConfig);
 
-  boost::property_tree::ptree spt;
+  boost::property_tree::ptree gpt;
   boost::property_tree::ptree upt;
-  boost::property_tree::read_json(scpath.c_str(), spt);
-  boost::property_tree::read_json(ucpath.c_str(), upt);
+
+  if( boost::filesystem::exists(gcpath) ){
+	  if( boost::filesystem::is_regular_file(gcpath) )
+	  {
+		  boost::property_tree::read_json(gcpath.c_str(),gpt);
+		  kp.clear();
+		  vp.clear();
+		  num.clear();
+		  mapProperties(gpt);
+
+	  }
+  }
+
+  if( boost::filesystem::exists(ucpath) ){
+	  if( boost::filesystem::is_regular_file(ucpath) )
+	  {
+		  boost::property_tree::read_json(ucpath.c_str(),upt);
+		  kp.clear();
+		  vp.clear();
+		  num.clear();
+		  mapProperties(upt);
+
+	  }
+  }
 
   kp.clear();
   vp.clear();
   num.clear();
-  mapProperties(spt);
-
-  kp.clear();
-  vp.clear();
-  num.clear();
-  mapProperties(upt);
-
-  kp.clear();
-  vp.clear();
-  num.clear();
-  spt.clear();
+  gpt.clear();
   upt.clear();
 }
+*/
 
 Configuration::~Configuration() {
   // TODO Auto-generated destructor stub
+}
+
+void Configuration::readConfigurationFile(std::string conffile)
+{
+	  boost::property_tree::ptree pt;
+	  boost::filesystem::path cpath(conffile);
+
+	  std::cout << "boost path cpath is \"" << cpath.string() << "\""<< std::endl;
+
+	  std::cout << "Entered the function readConfigurationFile()" << std::endl;
+	  if( boost::filesystem::exists( cpath ) )
+	  {
+		  std::cout << "path to file \"" << cpath.string() << "\" exists." << std::endl;
+		  if( boost::filesystem::is_regular_file(cpath) )
+		  {
+			  std::cout << "And \"" << cpath.string() << "\" is a regular file to read." << std::endl;
+			  boost::property_tree::read_json(cpath.c_str(),pt);
+			  std::cout << "read in the json file" << std::endl;
+
+			  kp.clear();
+			  vp.clear();
+			  num.clear();
+			  mapProperties(pt);
+
+		  }
+	  }
+	  else
+		  std::cout << "path to file \"" << cpath << "\" DOES NOT exist." << std::endl;
+
+	  kp.clear();
+	  vp.clear();
+	  num.clear();
+	  pt.clear();
+
 }
 
 std::string Configuration::getProperty(std::string key)

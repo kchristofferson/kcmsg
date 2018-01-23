@@ -42,7 +42,7 @@ Connection::Connection(sa_family_t fam, int t, int p, int maxthreads, std::strin
 	conn = {0};
 	listen_max = maxthreads;
 
-	logger_ = log4cplus::Logger::getInstance( LOG4CPLUS_TEXT(loginstance) );
+//	logger_ = log4cplus::Logger::getInstance( LOG4CPLUS_TEXT(loginstance) );
 
 	//set connection definition
 	family = fam;
@@ -100,14 +100,14 @@ int Connection::resolveHost(std::string host, std::string service)
 		std::memcpy( conn.addr.addr, result->ai_addr, sizeof(sockaddr_in6) );
 		break;
 	default:
-		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection class instantiated with unsupported protocol family: \"" )
-				<< family << "\"" );
-		throw std::invalid_argument("Unsupported protocol family");
+//		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection class instantiated with unsupported protocol family: \"" )
+//				<< family << "\"" );
+//		throw std::invalid_argument("Unsupported protocol family");
 		break;
 	}
 
-	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Resolved host: \"" ) << LOG4CPLUS_TEXT( host) << "\" and service: \""
-			<< LOG4CPLUS_TEXT( service) << "\" to " << formatAddress() );
+//	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Resolved host: \"" ) << LOG4CPLUS_TEXT( host) << "\" and service: \""
+//			<< LOG4CPLUS_TEXT( service) << "\" to " << formatAddress() );
 
 	freeaddrinfo(result);
 	return (res);
@@ -253,32 +253,32 @@ bool Connection::Accept(void)
 		cliaddr.addr.length = sizeof(uint8_t) + MAXADDRLEN;
 	}
 
-	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "accepting client ... ") );
+//	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "accepting client ... ") );
 
 	if ( ( cliaddr.fd = accept( conn.fd, ( sockaddr * ) &cliaddr.addr.addr, (unsigned int *) &cliaddr.addr.length ) ) < 0 )
 	{
 		return (errno);
 	}
 
-	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Client accepted on the descriptor (" ) << std::to_string( cliaddr.fd ) << ").");
+//	LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Client accepted on the descriptor (" ) << std::to_string( cliaddr.fd ) << ").");
 
 	return (true);
 }
 
 void Connection::Bind(void)
 {
-	int err;
+//	int err;
 	if ( ( bind(conn.fd, (const struct sockaddr *) &conn.addr.addr, (socklen_t) conn.addr.length) ) < 0 )
-	{
-		err = errno;
-		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection bind failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
+//	{
+//		err = errno;
+//		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection bind failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
 		throw std::ios_base::failure( "Unable to Bind()" );
-	}
-	else
-	{
-		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Bound socket (") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
-				<< LOG4CPLUS_TEXT( ") to " ) << LOG4CPLUS_TEXT( formatAddress() ) );
-	}
+//	}
+//	else
+//	{
+//		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Bound socket (") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
+//				<< LOG4CPLUS_TEXT( ") to " ) << LOG4CPLUS_TEXT( formatAddress() ) );
+//	}
 }
 
 void Connection::Close(int sockfd)
@@ -288,34 +288,34 @@ void Connection::Close(int sockfd)
 
 void Connection::Connect(void)
 {
-	int err;
+//	int err;
 	if ( ( conn.fd = connect(conn.fd, (const struct sockaddr *) &conn.addr.addr, (socklen_t) conn.addr.length) ) < 0 )
-	{
-		err = errno;
-		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection connect failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
+//	{
+//		err = errno;
+//		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection connect failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
 		throw std::ios_base::failure( "Unable to Connect()" );
-	}
-	else
-	{
-		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Connected socket (") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
-				<< LOG4CPLUS_TEXT( ") to " ) << LOG4CPLUS_TEXT( formatAddress() ) );
-	}
+//	}
+//	else
+//	{
+//		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Connected socket (") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
+//				<< LOG4CPLUS_TEXT( ") to " ) << LOG4CPLUS_TEXT( formatAddress() ) );
+//	}
 }
 
 void Connection::Listen(void)
 {
-	int err;
+//	int err;
 	if ( ( listen(conn.fd, listen_max) < 0 ) )
-	{
-		err = errno;
-		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection listen failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
+//	{
+//		err = errno;
+//		LOG4CPLUS_ERROR( logger_, LOG4CPLUS_TEXT( "Connection listen failure. ") << LOG4CPLUS_TEXT( formatErrno( err ) ) );
 		throw std::ios_base::failure( "Unable to Listen()" );
-	}
-	else
-	{
-		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Listening on socket descriptor(") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
-				<< LOG4CPLUS_TEXT( ") at address " ) << LOG4CPLUS_TEXT( formatAddress() ) );
-	}
+//	}
+//	else
+//	{
+//		LOG4CPLUS_DEBUG( logger_, LOG4CPLUS_TEXT( "Listening on socket descriptor(") << LOG4CPLUS_TEXT( std::to_string( conn.fd ) )
+//				<< LOG4CPLUS_TEXT( ") at address " ) << LOG4CPLUS_TEXT( formatAddress() ) );
+//	}
 }
 
 void Connection::Shutdown(int sockfd, int howto)
@@ -390,9 +390,10 @@ size_t Connection::ReadMessage(kcmsg::Message *msg, size_t nbytes)
 
 		// set the actual length of the message
 		// if we do not know it yet and have read in enough bytes to obtain it
-		if ( ( msgsize == 0) && ( ( nbytes - nleft ) >= (MESSAGE_LENGTH_OFFSET + 2) ) )
+		if ( ( msgsize == 0) && ( ( nbytes - nleft ) >= (sizeof(kcmsg::MessageHeader) + 2) ) )
 		{
-			msgsize = msg->getLength();
+			msg->readMessageLength();
+			msg->getMessageLength();
 			nleft -= ( nbytes - msgsize );
 		}
 
@@ -437,7 +438,7 @@ size_t Connection::WriteMessage(kcmsg::Message *msg)
 	const char *ptr;
 
 	ptr = (const char *) msg;
-	nleft = retval = msg->getLength();
+	nleft = retval = msg->getMessageLength();
 
 	while( nleft > 0 )
 	{
@@ -629,48 +630,6 @@ std::string Connection::formatErrno(int err)
 	case EIDRM :
 	   ret += "EIDRM - Identifier removed\"";
 	   break;
-	case ECHRNG :
-	   ret += "ECHRNG - Channel number out of range\"";
-	   break;
-	case EL2NSYNC :
-	   ret += "EL2NSYNC - Level 2 not synchronized\"";
-	   break;
-	case EL3HLT :
-	   ret += "EL3HLT - Level 3 halted\"";
-	   break;
-	case EL3RST :
-	   ret += "EL3RST - Level 3 reset\"";
-	   break;
-	case ELNRNG :
-	   ret += "ELNRNG - Link number out of range\"";
-	   break;
-	case EUNATCH :
-	   ret += "EUNATCH - Protocol driver not attached\"";
-	   break;
-	case ENOCSI :
-	   ret += "ENOCSI - No CSI structure available\"";
-	   break;
-	case EL2HLT :
-	   ret += "EL2HLT - Level 2 halted\"";
-	   break;
-	case EBADE :
-	   ret += "EBADE - Invalid exchange\"";
-	   break;
-	case EBADR :
-	   ret += "EBADR - Invalid request descriptor\"";
-	   break;
-	case EXFULL :
-	   ret += "EXFULL - Exchange full\"";
-	   break;
-	case ENOANO :
-	   ret += "ENOANO - No anode\"";
-	   break;
-	case EBADRQC :
-	   ret += "EBADRQC - Invalid request code\"";
-	   break;
-	case EBADSLT :
-	   ret += "EBADSLT - Invalid slot\"";
-	   break;
 	case ENOSTR :
 	   ret += "ENOSTR - Device not a stream\"";
 	   break;
@@ -683,26 +642,11 @@ std::string Connection::formatErrno(int err)
 	case ENOSR :
 	   ret += "ENOSR - Out of streams resources\"";
 	   break;
-	case ENONET :
-	   ret += "ENONET - Machine is not on the network\"";
-	   break;
-	case ENOPKG :
-	   ret += "ENOPKG - Package not installed\"";
-	   break;
 	case EREMOTE :
 	   ret += "EREMOTE - Object is remote\"";
 	   break;
 	case ENOLINK :
 	   ret += "ENOLINK - Link has been severed\"";
-	   break;
-	case EADV :
-	   ret += "EADV - Advertise error\"";
-	   break;
-	case ESRMNT :
-	   ret += "ESRMNT - Srmount error\"";
-	   break;
-	case ECOMM :
-	   ret += "ECOMM - Communication error on send\"";
 	   break;
 	case EPROTO :
 	   ret += "EPROTO - Protocol error\"";
@@ -710,44 +654,11 @@ std::string Connection::formatErrno(int err)
 	case EMULTIHOP :
 	   ret += "EMULTIHOP - Multihop attempted\"";
 	   break;
-	case EDOTDOT :
-	   ret += "EDOTDOT - RFS specific error\"";
-	   break;
 	case EBADMSG :
 	   ret += "EBADMSG - Not a data message\"";
 	   break;
 	case EOVERFLOW :
 	   ret += "EOVERFLOW - Value too large for defined data type\"";
-	   break;
-	case ENOTUNIQ :
-	   ret += "ENOTUNIQ - Name not unique on network\"";
-	   break;
-	case EBADFD :
-	   ret += "EBADFD - File descriptor in bad state\"";
-	   break;
-	case EREMCHG :
-	   ret += "EREMCHG - Remote address changed\"";
-	   break;
-	case ELIBACC :
-	   ret += "ELIBACC - Can not access a needed shared library\"";
-	   break;
-	case ELIBBAD :
-	   ret += "ELIBBAD - Accessing a corrupted shared library\"";
-	   break;
-	case ELIBSCN :
-	   ret += "ELIBSCN - .lib section in a.out corrupted\"";
-	   break;
-	case ELIBMAX :
-	   ret += "ELIBMAX - Attempting to link in too many shared libraries\"";
-	   break;
-	case ELIBEXEC :
-	   ret += "ELIBEXEC - Cannot exec a shared library directly\"";
-	   break;
-	case ERESTART :
-	   ret += "ERESTART - Interrupted system call should be restarted\"";
-	   break;
-	case ESTRPIPE :
-	   ret += "ESTRPIPE - Streams pipe error\"";
 	   break;
 	case EUSERS :
 	   ret += "EUSERS - Too many users\"";
@@ -839,56 +750,17 @@ std::string Connection::formatErrno(int err)
 	case ESTALE :
 	   ret += "ESTALE - Stale file handle\"";
 	   break;
-	case EUCLEAN :
-	   ret += "EUCLEAN - Structure needs cleaning\"";
-	   break;
-	case ENOTNAM :
-	   ret += "ENOTNAM - Not a XENIX named type file\"";
-	   break;
-	case ENAVAIL :
-	   ret += "ENAVAIL - No XENIX semaphores available\"";
-	   break;
-	case EISNAM :
-	   ret += "EISNAM - Is a named type file\"";
-	   break;
-	case EREMOTEIO :
-	   ret += "EREMOTEIO - Remote I/O error\"";
-	   break;
 	case EDQUOT :
 	   ret += "EDQUOT - Quota exceeded\"";
 	   break;
-	case ENOMEDIUM :
-	   ret += "ENOMEDIUM - No medium found\"";
-	   break;
-	case EMEDIUMTYPE :
-	   ret += "EMEDIUMTYPE - Wrong medium type\"";
-	   break;
 	case ECANCELED :
 	   ret += "ECANCELED - Operation Canceled\"";
-	   break;
-	case ENOKEY :
-	   ret += "ENOKEY - Required key not available\"";
-	   break;
-	case EKEYEXPIRED :
-	   ret += "EKEYEXPIRED - Key has expired\"";
-	   break;
-	case EKEYREVOKED :
-	   ret += "EKEYREVOKED - Key has been revoked\"";
-	   break;
-	case EKEYREJECTED :
-	   ret += "EKEYREJECTED - Key was rejected by service\"";
 	   break;
 	case EOWNERDEAD :
 	   ret += "EOWNERDEAD - Owner died\"";
 	   break;
 	case ENOTRECOVERABLE :
 	   ret += "ENOTRECOVERABLE - State not recoverable\"";
-	   break;
-	case ERFKILL :
-	   ret += "ERFKILL - Operation not possible due to RF-kill\"";
-	   break;
-	case EHWPOISON :
-	   ret += "EHWPOISON - Memory page has hardware error\"";
 	   break;
 	default :
 		ret += "UNKNOWN - UNKNOWN errno value\"";

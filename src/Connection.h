@@ -44,7 +44,7 @@ private:
 	int protocol;
 	connection_storage conn;
 	std::vector<connection_storage> clients;
-	log4cplus::Logger logger_;
+//	log4cplus::Logger logger_;
 
 	std::string formatAddress(void);
 	std::string formatErrno(int err);
