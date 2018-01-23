@@ -12,8 +12,9 @@
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
-#include <endian.h>
 #include <iomanip>
+#include <boost/endian/conversion.hpp>
+#include <boost/endian/buffers.hpp>
 
 #include "Message.h"
 
@@ -23,22 +24,24 @@ namespace kcmsg {
  *                            HEADER FORMAT
  *                            =============
  *
- *  | 00 01 02 03 04 05 06 07 | 08 09 0A 0B 0C 0D 0E 0F | 10 11 12 13 |
- *  |       source_ident      |       target_ident      |   tgt_org   |
+ *  | 00 01 02 03 | 04 05 | 06 07 08 09 | 0A 0B | 0C 0D | 0E 0F |
+ *  |   src_id    |src_org|   tgt_id    |tgt_org| trn_id|trn_app|
  *
- *              | 14 15 16 17 | 18 19 1A 1B | 1C 1D | 1E 1F |
- *              |   tgt_app   |     ttl     | tx_id | flags |
+ *  | 10 11 | 12 13 14 15 | 16 17 | 18 19 1A 1B 1C 1D 1E 1F ....
+ *  |trn_org|     ttl     | flags |msg_len|  user data ....
  *
  */
+const size_t MESSAGE_LENGTH_OFFSET = 0x18;
 
-const size_t HEADER_OFFSET = 0x00;
 const size_t HEADER_SOURCE_IDENT_OFFSET = 0x00;
-const size_t HEADER_TARGET_IDENT_OFFSET = 0x08;
-const size_t HEADER_TARGET_ORGANIZATION_OFFSET = 0x10;
-const size_t HEADER_TARGET_APPLICATION_OFFSET = 0x14;
-const size_t HEADER_TTL_OFFSET = 0x18;
-const size_t HEADER_TRANSACTION_IDENT_OFFSET = 0x1C;
-const size_t HEADER_FLAGS_OFFSET = 0x1E;
+const size_t HEADER_SOURCE_ORGANIZATION_OFFSET = 0x04;
+const size_t HEADER_TARGET_IDENT_OFFSET = 0x06;
+const size_t HEADER_TARGET_ORGANIZATION_OFFSET = 0x0A;
+const size_t HEADER_TRANSACTION_IDENT_OFFSET = 0x0C;
+const size_t HEADER_TRANSACTION_APPLICATION_OFFSET = 0x0E;
+const size_t HEADER_TRANSACTION_ORGANIZATION_OFFSET = 0x10;
+const size_t HEADER_TTL_OFFSET = 0x12;
+const size_t HEADER_FLAGS_OFFSET = 0x16;
 
 /* Supported Data Type Identifiers */
 const uint8_t DATA_TYPE = 0x00;
@@ -71,6 +74,92 @@ const uint8_t DATA_TYPE_WSTRING_ARRAY = 0x1A;
 const uint8_t DATA_TYPE_TIME_ARRAY = 0x1B;
 const uint8_t DATA_TYPE_DURRATION_ARRAY = 0x1C;
 
+/* Private Methods */
+
+void Message::readHeader(void)
+{
+	boost::endian::little_uint32_buf_t src_id;
+	boost::endian::little_uint16_buf_t src_org;
+	boost::endian::little_uint32_buf_t tgt_id;
+	boost::endian::little_uint16_buf_t tgt_org;
+	boost::endian::little_uint16_buf_t trans_id;
+	boost::endian::little_uint16_buf_t trans_app;
+	boost::endian::little_uint16_buf_t trans_org;
+	boost::endian::little_uint32_buf_t ttl;
+	boost::endian::little_uint16_buf_t flags;
+
+
+	memcpy(&src_id, &data[HEADER_SOURCE_IDENT_OFFSET], sizeof(src_id));
+	memcpy(&src_org, &data[HEADER_SOURCE_ORGANIZATION_OFFSET], sizeof(src_org));
+	memcpy(&tgt_id, &data[HEADER_TARGET_IDENT_OFFSET], sizeof(tgt_id));
+	memcpy(&tgt_org, &data[HEADER_TARGET_ORGANIZATION_OFFSET], sizeof(tgt_org));
+	memcpy(&trans_id, &data[HEADER_TRANSACTION_IDENT_OFFSET], sizeof(trans_id));
+	memcpy(&trans_app, &data[HEADER_TRANSACTION_APPLICATION_OFFSET], sizeof(trans_app));
+	memcpy(&trans_org, &data[HEADER_TRANSACTION_ORGANIZATION_OFFSET], sizeof(trans_org));
+	memcpy(&ttl, &data[HEADER_TTL_OFFSET], sizeof(ttl));
+	memcpy(&flags, &data[HEADER_FLAGS_OFFSET], sizeof(flags));
+
+	hdr.source_ident = src_id.value();
+	hdr.source_organization = src_org.value();
+	hdr.target_ident = tgt_id.value();
+	hdr.target_organization = tgt_org.value();
+	hdr.transaction_ident = trans_id.value();
+	hdr.transaction_application = trans_app.value();
+	hdr.transaction_organization = trans_org.value();
+	hdr.ttl = ttl.value();
+	hdr.flags = flags.value();
+}
+
+void Message::writeHeader(void)
+{
+
+	boost::endian::little_uint32_buf_t src_id;
+	boost::endian::little_uint16_buf_t src_org;
+	boost::endian::little_uint32_buf_t tgt_id;
+	boost::endian::little_uint16_buf_t tgt_org;
+	boost::endian::little_uint16_buf_t trans_id;
+	boost::endian::little_uint16_buf_t trans_app;
+	boost::endian::little_uint16_buf_t trans_org;
+	boost::endian::little_uint32_buf_t ttl;
+	boost::endian::little_uint16_buf_t flags;
+
+	src_id = hdr.source_ident;
+	src_org = hdr.source_organization;
+	tgt_id = hdr.target_ident;
+	tgt_org = hdr.target_organization;
+	trans_id = hdr.transaction_ident;
+	trans_app = hdr.transaction_application;
+	trans_org = hdr.transaction_organization;
+	ttl = hdr.ttl;
+	flags = hdr.flags;
+
+	memcpy(&data[HEADER_SOURCE_IDENT_OFFSET], &src_id, sizeof(src_id));
+	memcpy(&data[HEADER_SOURCE_ORGANIZATION_OFFSET], &src_org, sizeof(src_org));
+	memcpy(&data[HEADER_TARGET_IDENT_OFFSET], &tgt_id, sizeof(tgt_id));
+	memcpy(&data[HEADER_TARGET_ORGANIZATION_OFFSET], &tgt_org, sizeof(tgt_org));
+	memcpy(&data[HEADER_TRANSACTION_IDENT_OFFSET], &trans_id, sizeof(trans_id));
+	memcpy(&data[HEADER_TRANSACTION_APPLICATION_OFFSET], &trans_app, sizeof(trans_app));
+	memcpy(&data[HEADER_TRANSACTION_ORGANIZATION_OFFSET], &trans_org, sizeof(trans_org));
+	memcpy(&data[HEADER_TTL_OFFSET], &ttl, sizeof(ttl));
+	memcpy(&data[HEADER_FLAGS_OFFSET], &flags, sizeof(flags));
+}
+
+void Message::readMessageLength(void)
+{
+	boost::endian::little_uint16_buf_t msg_len;
+
+	memcpy(&msg_len, &data[MESSAGE_LENGTH_OFFSET], sizeof(msg_len));
+	data_length = msg_len.value();
+}
+
+void Message::updateDataLength(std::size_t delta)
+{
+	boost::endian::little_uint16_buf_t ndl;
+	data_length += delta;
+	ndl = data_length;
+	memcpy(&data[MESSAGE_LENGTH_OFFSET], &ndl, sizeof(ndl));
+}
+
 /* Public Methods */
 
 Message::Message()
@@ -78,15 +167,18 @@ Message::Message()
 	int maxdata = MAX_MSG_DATA;
 	data = (char *) malloc(maxdata);
 	assert(data);
+	boost::endian::little_uint16_buf_t ndl;
 
 	// zero out the message space
 	memset(data, 0, maxdata);
 
 	// set user data in message to end of message header
 	data_length = offset = (std::size_t) MESSAGE_LENGTH_OFFSET + 2;
-	network_data_length = htobe16( MESSAGE_LENGTH_OFFSET + 2 );
 
-	memcpy(&data[MESSAGE_LENGTH_OFFSET], &network_data_length, sizeof(network_data_length));
+	// store the current length of the message, header plus a two byte length field
+	// into the data.  This forces message size max to not be greater than 64K
+	ndl = (boost::endian::little_uint16_buf_t) data_length;
+	memcpy(&data[MESSAGE_LENGTH_OFFSET], &ndl, sizeof(ndl));
 }
 
 Message::~Message()
@@ -95,230 +187,149 @@ Message::~Message()
 		free( data );
 }
 
-void Message::setSourceIdentity(uint64_t id)
+void Message::setSourceIdentifier(uint32_t id)
 {
-	uint64_t nval;
-	nval = htobe64(id);
-
-	memcpy(&data[HEADER_SOURCE_IDENT_OFFSET], &nval, sizeof(nval));
+	hdr.source_ident = id;
 }
 
-uint64_t Message::getSourceIdentity(void)
+uint32_t Message::getSourceIdentifier(void)
 {
-	uint64_t retval;
-
-	memcpy(&retval, &data[HEADER_SOURCE_IDENT_OFFSET], sizeof(retval));
-
-	return ( be64toh( retval ) );
+	return ( hdr.source_ident );
 }
 
-void Message::setTargetIdentity(uint64_t id)
+void Message::setSourceOrganization(uint16_t id)
 {
-	uint64_t nval;
-	nval = htobe64(id);
-
-	memcpy(&data[HEADER_TARGET_IDENT_OFFSET], &nval, sizeof(nval));
+	hdr.source_organization = id;
 }
 
-uint64_t Message::getTargetIdentity(void)
+uint16_t Message::getSourceOrganization(void)
 {
-	uint64_t retval;
-
-	memcpy(&retval, &data[HEADER_TARGET_IDENT_OFFSET], sizeof(retval));
-
-	return ( be64toh( retval ) );
+	return ( hdr.source_organization );
 }
 
-void Message::setTargetOrganization(uint32_t id)
+void Message::setTargetIdentifier(uint32_t id)
 {
-	uint32_t nval;
-	nval = htobe32(id);
-
-	memcpy(&data[HEADER_TARGET_ORGANIZATION_OFFSET], &nval, sizeof(nval));
+	hdr.target_ident = id;
 }
 
-uint32_t Message::getTargetOrganization(void)
+uint32_t Message::getTargetIdentifier(void)
 {
-	uint32_t retval;
-
-	memcpy(&retval, &data[HEADER_TARGET_IDENT_OFFSET], sizeof(retval));
-
-	return ( be32toh( retval ) );
+	return ( hdr.target_ident );
 }
 
-void Message::setTargetApplication(uint32_t id)
+void Message::setTargetOrganization(uint16_t id)
 {
-	uint32_t nval;
-	nval = htobe32(id);
-
-	memcpy(&data[HEADER_TARGET_APPLICATION_OFFSET], &nval, sizeof(nval));
+	hdr.target_organization = id;
 }
 
-uint32_t Message::getTargetApplication(void)
+uint16_t Message::getTargetOrganization(void)
 {
-	uint32_t retval;
+	return ( hdr.target_organization );
+}
 
-	memcpy(&retval, &data[HEADER_TARGET_APPLICATION_OFFSET], sizeof(retval));
+void Message::setTransactionIdentifier(uint16_t id)
+{
+	hdr.transaction_ident = id;
+}
 
-	return ( be32toh( retval ) );
+uint16_t Message::getTransactionIdentifier(void)
+{
+	return ( hdr.transaction_ident );
+}
+
+void Message::setTransactionApplication(uint16_t id)
+{
+	hdr.transaction_application = id;
+}
+
+uint16_t Message::getTransactionApplication(void)
+{
+	return ( hdr.transaction_application );
+}
+
+void Message::setTransactionOrganization(uint16_t id)
+{
+	hdr.transaction_organization = id;
+}
+
+uint16_t Message::getTransactionOrganization(void)
+{
+	return ( hdr.transaction_organization );
 }
 
 void Message::setTTL(uint32_t val)
 {
-	uint32_t nval;
-	nval = htobe32(val);
-
-	memcpy(&data[HEADER_TTL_OFFSET], &nval, sizeof(nval));
+	hdr.ttl = val;
 }
 
 uint32_t Message::getTTL(void)
 {
-	uint32_t retval;
-
-	memcpy(&retval, &data[HEADER_TTL_OFFSET], sizeof(retval));
-
-	return ( be32toh( retval ) );
-}
-
-void Message::setTransactionIdentity(uint16_t id)
-{
-	uint16_t nval;
-	nval = htobe16(id);
-
-	memcpy(&data[HEADER_TRANSACTION_IDENT_OFFSET], &nval, sizeof(nval));
-}
-
-uint16_t Message::getTransactionIdentity(void)
-{
-	uint16_t retval;
-
-	memcpy(&retval, &data[HEADER_TRANSACTION_IDENT_OFFSET], sizeof(retval));
-
-	return ( be16toh( retval ) );
-}
-
-void Message::updateDataLength(std::size_t delta)
-{
-	data_length += delta;
-	network_data_length = htobe16( ( uint16_t ) data_length );
-	memcpy(&data[MESSAGE_LENGTH_OFFSET], &network_data_length, sizeof(network_data_length));
-}
-
-void Message::setFlags(uint16_t val)
-{
-	uint16_t nval;
-	nval = htobe16(val);
-
-	memcpy(&data[HEADER_FLAGS_OFFSET], &nval, sizeof(nval));
-}
-
-uint16_t Message::getFlags(void)
-{
-	uint16_t retval;
-
-	memcpy(&retval, &data[HEADER_FLAGS_OFFSET], sizeof(retval));
-
-	return ( be16toh( retval ) );
+	return ( hdr.ttl );
 }
 
 void Message::setOnceAndOnlyOnce(bool val)
 {
-	uint16_t f;
-	f = this->getFlags();
 	if ( val )
-		f = f | MSG_FLAG_ONCE_AND_ONLY_ONCE;
+		hdr.flags = hdr.flags | MSG_FLAG_ONCE_AND_ONLY_ONCE;
 	else
-		f = f & ~MSG_FLAG_ONCE_AND_ONLY_ONCE;
-	this->setFlags(f);
+		hdr.flags = hdr.flags & ~MSG_FLAG_ONCE_AND_ONLY_ONCE;
 }
 
 bool Message::isOnceAndOnlyOnce(void)
 {
-	uint16_t f;
-	f = this->getFlags();
-	return (f & MSG_FLAG_ONCE_AND_ONLY_ONCE) > 0 ? true : false;
+	return (hdr.flags & MSG_FLAG_ONCE_AND_ONLY_ONCE) > 0 ? true : false;
 }
 
 void Message::setQuickDeath(bool val)
 {
-	uint16_t f;
-	f = this->getFlags();
-
 	if ( val )
-		f = f | MSG_FLAG_QUICK_DEATH;
+		hdr.flags = hdr.flags | MSG_FLAG_QUICK_DEATH;
 	else
-		f = f & ~MSG_FLAG_QUICK_DEATH;
-
-	this->setFlags(f);
+		hdr.flags = hdr.flags & ~MSG_FLAG_QUICK_DEATH;
 }
 
 bool Message::isQuickDeath(void)
 {
-	uint16_t f;
-	f = this->getFlags();
-
-	return (f & MSG_FLAG_QUICK_DEATH) > 0 ? true : false;
+	return (hdr.flags & MSG_FLAG_QUICK_DEATH) > 0 ? true : false;
 }
 
 void Message::setMessageFragment(bool val)
 {
-	uint16_t f;
-	f = this->getFlags();
-
 	if ( val )
-		f = f | MSG_FLAG_FRAGMENT;
+		hdr.flags = hdr.flags | MSG_FLAG_FRAGMENT;
 	else
-		f = f & ~MSG_FLAG_FRAGMENT;
-
-	this->setFlags(f);
+		hdr.flags = hdr.flags & ~MSG_FLAG_FRAGMENT;
 }
 
 bool Message::isMessageFragment(void)
 {
-	uint16_t f;
-	f = this->getFlags();
-
-	return (f & MSG_FLAG_FRAGMENT) > 0 ? true : false;
+	return (hdr.flags & MSG_FLAG_FRAGMENT) > 0 ? true : false;
 }
 
-void Message::getHeader(kcmsg::MessageHeader *hdr)
+size_t Message::getMessageLength(void)
 {
-	memcpy(hdr, &data[HEADER_OFFSET], sizeof( kcmsg::MessageHeader ) );
-
-	hdr->source_ident = be64toh( hdr->source_ident );
-	hdr->target_ident = be64toh( hdr->target_ident );
-	hdr->transaction_organization = be32toh( hdr->transaction_organization );
-	hdr->transaction_application = be32toh( hdr->transaction_application );
-	hdr->ttl = be32toh( hdr->ttl );
-	hdr->transaction_ident = be16toh( hdr->transaction_ident );
-	hdr->flags = be16toh( hdr->flags );
-}
-
-size_t Message::getLength(void)
-{
-	memcpy(&network_data_length, &data[MESSAGE_LENGTH_OFFSET], sizeof( network_data_length ) );
-	data_length = ( std::size_t ) be16toh( network_data_length );
 	return ( data_length );
 }
 
-void Message::message_send(void)
+void Message::debugMessageSerialize(std::string fo)
 {
-
-}
-
-void Message::message_serialize(void)
-{
-
+	FILE *fd;
+	if ( ( fd = fopen(fo.c_str(), "wb") ) != nullptr)
+	{
+		fwrite(&data, data_length, 1, fd);
+		fclose(fd);
+	}
 }
 
 uint8_t Message::getDataType(void)
 {
+	//  uint8_t don't worry about endianess
 	uint8_t val;
 	memcpy(&val, &data[offset], sizeof(DATA_TYPE));
 	return val;
 }
 
-void Message::debug_print_message_data(void)
+void Message::debugMessagePrint(void)
 {
 	int dt;
 	std::string s;
@@ -327,12 +338,14 @@ void Message::debug_print_message_data(void)
 	std::cout << "======================" << std::endl;
 	std::cout << "<message>" << std::endl;
 	std::cout << "    <header>" << std::endl;
-	std::cout << "        <source_ident>" << getSourceIdentity() << "</source_ident>" << std::endl;
-	std::cout << "        <target_ident>" << getTargetIdentity() << "</target_ident>" << std::endl;
+	std::cout << "        <source_identifier>" << getSourceIdentifier() << "</source_identifier>" << std::endl;
+	std::cout << "        <source_organization>" << getSourceOrganization() << "</source_organization>" << std::endl;
+	std::cout << "        <target_identifier>" << getTargetIdentifier() << "</target_identifier>" << std::endl;
 	std::cout << "        <target_organization>" << getTargetOrganization() << "</target_organization>" << std::endl;
-	std::cout << "        <target_application>" << getTargetApplication() << "</target_application>" << std::endl;
+	std::cout << "        <transaction_identifier>" << getTransactionIdentifier() << "</transaction_identifier>" << std::endl;
+	std::cout << "        <transaction_application>" << getTransactionApplication() << "</transaction_application>" << std::endl;
+	std::cout << "        <transaction_organization>" << getTransactionOrganization() << "</transaction_organization>" << std::endl;
 	std::cout << "        <ttl>" << getTTL() << "</ttl>" << std::endl;
-	std::cout << "        <transaction_ident>" << getTransactionIdentity() << "</transaction_ident>" << std::endl;
 	std::cout << "        <is_once>" << ((isOnceAndOnlyOnce())?"true":"false") << "</is_once>" << std::endl;
 	std::cout << "        <is_quick_death>" << ((isQuickDeath())?"true":"false") << "</is_quick_death>" << std::endl;
 	std::cout << "        <is_fragment>" << ((isMessageFragment())?"true":"false") << "</is_fragment>" << std::endl;
@@ -473,14 +486,15 @@ void Message::putByte(int8_t val)
 
 void Message::putShort(int16_t val)
 {
+	boost::endian::little_int16_buf_t nval;
+
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_SHORT, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int16_t nval;
-		nval = htobe16(val);
 
+		nval = val;
 		memcpy( &data[data_length], &nval, sizeof(nval) );
 		updateDataLength( sizeof( nval ) );
 	}
@@ -492,14 +506,13 @@ void Message::putShort(int16_t val)
 
 void Message::putInt(int32_t val)
 {
+	boost::endian::little_int32_buf_t nval;
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_INT, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int32_t nval;
-		nval = htobe32(val);
-
+		nval = val;
 		memcpy( &data[data_length], &nval, sizeof(nval) );
 		updateDataLength( sizeof( nval ) );
 	}
@@ -511,14 +524,13 @@ void Message::putInt(int32_t val)
 
 void Message::putLong(int32_t val)
 {
+	boost::endian::little_int32_buf_t nval;
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_LONG, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int32_t nval;
-		nval = htobe32(val);
-
+		nval = val;
 		memcpy( &data[data_length], &nval, sizeof(nval) );
 		updateDataLength( sizeof( nval ) );
 	}
@@ -530,14 +542,13 @@ void Message::putLong(int32_t val)
 
 void Message::putLongLong(int64_t val)
 {
+	boost::endian::little_int64_buf_t nval;
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_LONG_LONG, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int64_t nval;
-		nval = htobe64(val);
-
+		nval = val;
 		memcpy( &data[data_length], &nval, sizeof(nval) );
 		updateDataLength( sizeof( nval ) );
 	}
@@ -547,18 +558,22 @@ void Message::putLongLong(int64_t val)
 	}
 }
 
-void Message::putFloat(int32_t val)
+
+
+
+
+
+
+
+void Message::putFloat(float val)
 {
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_FLOAT, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int32_t nval;
-		nval = htobe32(val);
-
-		memcpy( &data[data_length], &nval, sizeof(nval) );
-		updateDataLength( sizeof( nval ) );
+		memcpy( &data[data_length], &val, sizeof(val) );
+		updateDataLength( sizeof( val ) );
 	}
 	else
 	{
@@ -566,24 +581,28 @@ void Message::putFloat(int32_t val)
 	}
 }
 
-void Message::putDouble(int64_t val)
+void Message::putDouble(double val)
 {
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
 		memcpy( &data[data_length], &DATA_TYPE_DOUBLE, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		int64_t nval;
-		nval = htobe64(val);
-
-		memcpy( &data[data_length], &nval, sizeof(nval) );
-		updateDataLength( sizeof( nval ) );
+		memcpy( &data[data_length], &val, sizeof(val) );
+		updateDataLength( sizeof( val ) );
 	}
 	else
 	{
 		throw std::domain_error( "exceeded maximum message size" );
 	}
 }
+
+
+
+
+
+
+
 
 void Message::putChar(char val)
 {
@@ -646,12 +665,12 @@ void Message::putString(std::string val)
 	case DATA_TYPE_STRING_2 :
 		if ( data_length + sizeof(DATA_TYPE) + sizeof(uint16_t) + l * sizeof(char) <= MAX_MSG_DATA )
 		{
+			boost::endian::little_uint16_buf_t nval;
+
 			memcpy( &data[data_length], &dt, sizeof(DATA_TYPE));
 			updateDataLength( sizeof( DATA_TYPE ) );
 
-			int16_t nval;
-			nval = htobe16(l);
-
+			nval = (uint16_t) l;
 			memcpy( &data[data_length], &nval, sizeof( nval ) );
 			updateDataLength( sizeof( nval ) );
 
@@ -697,11 +716,12 @@ void Message::putWString(std::wstring val)
 	case DATA_TYPE_WSTRING_2 :
 		if ( data_length + sizeof(DATA_TYPE) + sizeof(uint16_t) + l * sizeof(wchar_t) <= MAX_MSG_DATA )
 		{
+			boost::endian::little_uint16_buf_t nval;
+
 			memcpy( &data[data_length], &dt, sizeof(DATA_TYPE));
 			updateDataLength( sizeof( DATA_TYPE ) );
 
-			int16_t nval;
-			nval = htobe16(l);
+			nval = (uint16_t) l;
 			memcpy( &data[data_length], &nval, sizeof( nval ) );
 			updateDataLength( sizeof( nval ) );
 
@@ -724,11 +744,14 @@ void Message::putTime(time_t val)
 {
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
+		boost::endian::little_uint64_buf_t nval;
+
 		memcpy( &data[data_length], &DATA_TYPE_TIME, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		memcpy( &data[data_length], &val, sizeof(val) );
-		updateDataLength( sizeof( val ) );
+		nval = val;
+		memcpy( &data[data_length], &nval, sizeof(nval) );
+		updateDataLength( sizeof( nval ) );
 	}
 	else
 	{
@@ -740,11 +763,12 @@ void Message::putDuration(uint32_t val)
 {
 	if ( data_length + sizeof(DATA_TYPE) + sizeof(val) <= MAX_MSG_DATA )
 	{
+		boost::endian::little_uint32_buf_t nval;
+
 		memcpy( &data[data_length], &DATA_TYPE_DURATION, sizeof(DATA_TYPE));
 		updateDataLength( sizeof( DATA_TYPE ) );
 
-		uint32_t nval;
-		nval = htobe32(val);
+		nval = val;
 		memcpy( &data[data_length], &nval, sizeof(nval) );
 		updateDataLength( sizeof( nval ) );
 	}
@@ -845,79 +869,74 @@ int8_t Message::getByte(void)
 int16_t Message::getShort(void)
 {
 	int8_t data_type = 0;
-	int16_t val = 0;
+	boost::endian::little_int16_buf_t nval;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_SHORT );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
-	int16_t hval;
-	hval = be16toh(val);
-
-	return hval;
+	return ( nval.value() );
 }
 
 int32_t Message::getInt(void)
 {
 	int8_t data_type = 0;
-	int32_t val = 0;
+	boost::endian::little_int32_buf_t nval;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_INT );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
-	int32_t hval;
-	hval = be32toh(val);
-
-	return hval;
+	return ( nval.value() );
 }
 
 int32_t Message::getLong(void)
 {
 	int8_t data_type = 0;
-	int32_t val = 0;
+	boost::endian::little_int16_buf_t nval;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_LONG );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
-	int32_t hval;
-	hval = be32toh(val);
-
-	return hval;
+	return ( nval.value() );
 }
 
 int64_t Message::getLongLong(void)
 {
 	int8_t data_type = 0;
-	int64_t val = 0;
+	boost::endian::little_int64_buf_t nval;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_LONG_LONG );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
-	int64_t hval;
-	hval = be64toh(val);
-
-	return hval;
+	return ( nval.value() );
 }
 
-int32_t Message::getFloat(void)
+
+
+
+
+
+
+
+float Message::getFloat(void)
 {
 	int8_t data_type = 0;
-	int32_t val = 0;
+	float val = 0;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
@@ -926,16 +945,13 @@ int32_t Message::getFloat(void)
 	memcpy( &val, &data[offset], sizeof( val ) );
 	offset += sizeof( val );
 
-	int32_t hval;
-	hval = be32toh(val);
-
-	return hval;
+	return val;
 }
 
-int64_t Message::getDouble(void)
+double Message::getDouble(void)
 {
 	int8_t data_type = 0;
-	int64_t val = 0;
+	double val = 0;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
@@ -944,11 +960,15 @@ int64_t Message::getDouble(void)
 	memcpy( &val, &data[offset], sizeof( val ) );
 	offset += sizeof( val );
 
-	int64_t hval;
-	hval = be64toh(val);
-
-	return hval;
+	return val;
 }
+
+
+
+
+
+
+
 
 char Message::getChar(void)
 {
@@ -983,8 +1003,8 @@ wchar_t Message::getWChar(void)
 std::string Message::getString(void)
 {
 	int8_t data_type = 0;
-	int8_t s1len = 0;
-	int16_t s2len = 0;
+	boost::endian::little_int8_buf_t s1len;
+	boost::endian::little_int16_buf_t s2len;
 	size_t string_len = 0;
 	size_t elem_size = 0;
 	int sv = 0;
@@ -1001,12 +1021,12 @@ std::string Message::getString(void)
 	case DATA_TYPE_STRING_1 :
 		memcpy( &s1len, &data[offset], sizeof( s1len ));
 		offset += sizeof( s1len );
-		string_len = (size_t) s1len;
+		string_len = (size_t) s1len.value();
 		break;
 	case DATA_TYPE_STRING_2 :
 		memcpy( &s2len, &data[offset], sizeof( s2len ));
 		offset += sizeof( s2len );
-		string_len = (size_t) be16toh( s2len );
+		string_len = (size_t) s2len.value();
 		break;
 	default :
 		break;
@@ -1027,8 +1047,9 @@ std::string Message::getString(void)
 std::wstring Message::getWString(void)
 {
 	int8_t data_type = 0;
-	int8_t s1len = 0;
-	int16_t s2len = 0;
+	boost::endian::little_int8_buf_t s1len;
+	boost::endian::little_int16_buf_t s2len;
+
 	size_t wstring_len;
 	int sv = 0;
 	wchar_t *ptr = nullptr;
@@ -1043,15 +1064,18 @@ std::wstring Message::getWString(void)
 	{
 	case DATA_TYPE_WSTRING_1 :
 		memcpy( &s1len, &data[offset], sizeof( s1len ));
+
 		offset += sizeof( s1len );
-		wstring_len = (size_t) s1len;
+		wstring_len = (size_t) s1len.value();
 		break;
 	case DATA_TYPE_WSTRING_2 :
 		memcpy( &s2len, &data[offset], sizeof( s2len ));
+
 		offset += sizeof( s2len );
-		wstring_len = (size_t) be16toh( s2len );
+		wstring_len = (size_t) s2len.value();
 		break;
 	default :
+		wstring_len = 0;
 		break;
 	}
 
@@ -1069,34 +1093,33 @@ std::wstring Message::getWString(void)
 time_t Message::getTime(void)
 {
 	int8_t data_type = 0;
+	boost::endian::little_int64_buf_t nval;
 	time_t val = 0;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_TIME );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
+	val = (time_t) nval.value();
 	return val;
 }
 
 uint32_t Message::getDuration(void)
 {
 	int8_t data_type = 0;
-	uint32_t val = 0;
+	boost::endian::little_int32_buf_t nval;
 
 	memcpy( &data_type, &data[offset], sizeof( DATA_TYPE ));
 	offset += sizeof( DATA_TYPE );
 	assert ( data_type == DATA_TYPE_DURATION );
 
-	memcpy( &val, &data[offset], sizeof( val ) );
-	offset += sizeof( val );
+	memcpy( &nval, &data[offset], sizeof( nval ) );
+	offset += sizeof( nval );
 
-	uint32_t hval;
-	hval = be32toh(val);
-
-	return hval;
+	return ( nval.value() );
 }
 
 } /* namespace kcmsg */
