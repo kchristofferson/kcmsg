@@ -7,12 +7,12 @@
 
 #include "Configuration.h"
 #include "Property.h"
-
 #include <pwd.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <string>
 #include <iostream>
+#include <cerrno>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -21,108 +21,48 @@
 
 namespace kcmsg {
 
+  /* Static Methods */
+  void mapProperties( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, boost::property_tree::ptree pt, std::unordered_map<std::string,kcmsg::Property> props
+ );
+  void insertProperty( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, 	  std::unordered_map<std::string,kcmsg::Property> props );
+  void debugPrintPropertyTree( boost::property_tree::ptree pt );
+
+
 Configuration::Configuration() {
 
 }
-
-/*
-Configuration::Configuration(std::string progName) {
-	Configuration("/etc/", progName);
-}
-
-Configuration::Configuration(std::string gblDirectory, std::string progName) {
-
-	std::size_t pos;
-	pos = progName.find_last_of("\\/");
-	if( pos != std::string::npos )
-		progName = progName.substr( pos );
-
-	pos = progName.rfind(".");
-	if( pos != std::string::npos )
-		progName = progName.substr(0, pos);
-
-	pos = gblDirectory.rfind("/");
-	if( pos != 0 )
-		gblDirectory.append("/");
-	std::string globalConfig = gblDirectory + progName + "/config.json";
-	std::string userConfig = "/." + progName + "/config.json";
-
-  boost::filesystem::path gcpath(globalConfig);
-  struct passwd *pw = getpwuid( getuid() );
-  boost::filesystem::path ucpath( pw->pw_dir );
-  ucpath.append(userConfig);
-
-  boost::property_tree::ptree gpt;
-  boost::property_tree::ptree upt;
-
-  if( boost::filesystem::exists(gcpath) ){
-	  if( boost::filesystem::is_regular_file(gcpath) )
-	  {
-		  boost::property_tree::read_json(gcpath.c_str(),gpt);
-		  kp.clear();
-		  vp.clear();
-		  num.clear();
-		  mapProperties(gpt);
-
-	  }
-  }
-
-  if( boost::filesystem::exists(ucpath) ){
-	  if( boost::filesystem::is_regular_file(ucpath) )
-	  {
-		  boost::property_tree::read_json(ucpath.c_str(),upt);
-		  kp.clear();
-		  vp.clear();
-		  num.clear();
-		  mapProperties(upt);
-
-	  }
-  }
-
-  kp.clear();
-  vp.clear();
-  num.clear();
-  gpt.clear();
-  upt.clear();
-}
-*/
 
 Configuration::~Configuration() {
   // TODO Auto-generated destructor stub
 }
 
-void Configuration::readConfigurationFile(std::string conffile)
+int Configuration::readConfigurationFile(std::string conffile)
 {
 	  boost::property_tree::ptree pt;
 	  boost::filesystem::path cpath(conffile);
-
-	  std::cout << "boost path cpath is \"" << cpath.string() << "\""<< std::endl;
-
-	  std::cout << "Entered the function readConfigurationFile()" << std::endl;
-	  if( boost::filesystem::exists( cpath ) )
-	  {
-		  std::cout << "path to file \"" << cpath.string() << "\" exists." << std::endl;
-		  if( boost::filesystem::is_regular_file(cpath) )
-		  {
-			  std::cout << "And \"" << cpath.string() << "\" is a regular file to read." << std::endl;
-			  boost::property_tree::read_json(cpath.c_str(),pt);
-			  std::cout << "read in the json file" << std::endl;
-
-			  kp.clear();
-			  vp.clear();
-			  num.clear();
-			  mapProperties(pt);
-
-		  }
-	  }
-	  else
-		  std::cout << "path to file \"" << cpath << "\" DOES NOT exist." << std::endl;
+	  std::vector<std::string> kp;
+	  std::vector<std::string> vp;
+	  std::vector<uint> num;
+	  std::unordered_map<std::string,kcmsg::Property> props;
 
 	  kp.clear();
 	  vp.clear();
 	  num.clear();
-	  pt.clear();
 
+	  if( boost::filesystem::exists( cpath ) )
+	  {
+		  if( boost::filesystem::is_regular_file(cpath) )
+		  {
+			  boost::property_tree::read_json(cpath.c_str(),pt);
+			  mapProperties(kp, vp, num, pt, props);
+
+		  }
+	  }
+	  else
+		  return ENOENT;
+
+	  properties += props;
+	  return 0;
 }
 
 std::string Configuration::getProperty(std::string key)
@@ -200,9 +140,9 @@ void Configuration::dumpProperties( void )
 	}
 }
 
-/* Private methods */
+/* Static Methods */
 
-void Configuration::mapProperties(const boost::property_tree::ptree pt) {
+void kcmsg::mapProperties( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, const boost::property_tree::ptree pt, std::unordered_map<std::string,kcmsg::Property> props ) {
 	int i;
 
 	for (boost::property_tree::ptree::const_iterator it = pt.begin();
@@ -219,7 +159,7 @@ void Configuration::mapProperties(const boost::property_tree::ptree pt) {
 				{
 			if (!it->first.empty()) // It is not an array
 			{
-				insertProperty();
+				kcmsg::insertProperty( kp, vp, num, props );
 				kp.pop_back();
 				vp.clear();
 				num.end()[-2]--;
@@ -228,7 +168,7 @@ void Configuration::mapProperties(const boost::property_tree::ptree pt) {
 				num.end()[-2]--;
 				if (num.end()[-2] == 0) // I have all elements of the array
 						{
-					insertProperty();
+					kcmsg::insertProperty( kp, vp, num, props );
 					vp.clear();
 				}
 			}
@@ -240,11 +180,11 @@ void Configuration::mapProperties(const boost::property_tree::ptree pt) {
 			if( !num.empty() )
 				num.end()[-1]--;
 		}
-		mapProperties(it->second);
+		kcmsg::mapProperties(kp, vp, num, it->second, props);
 	}
 }
 
-void Configuration::insertProperty(void)
+void kcmsg::insertProperty( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, 	  std::unordered_map<std::string,kcmsg::Property> props )
 {
 	std::string key;
 
@@ -262,16 +202,16 @@ void Configuration::insertProperty(void)
 	{
 		void *ptr = static_cast<void *>(new std::string(vp.front()));
 		kcmsg::Property *p = new kcmsg::Property(PROP_TYPE_STRING, ptr);
-		properties[key] = *p;
+		props[key] = *p;
 	} else  // I'm dealing with a vector
 	{
 		void *ptr = static_cast<void *>( new std::vector<std::string>(vp) );
 		kcmsg::Property *p = new kcmsg::Property(PROP_TYPE_STRING_ARRAY, ptr );
-		properties[key] = *p;
+		props[key] = *p;
 	}
 }
 
-void Configuration::debugPrintPropertyTree( boost::property_tree::ptree pt )
+void kcmsg::debugPrintPropertyTree( boost::property_tree::ptree pt )
 {
 	for (boost::property_tree::ptree::const_iterator it = pt.begin();
 			it != pt.end(); it++) {
