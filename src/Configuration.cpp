@@ -61,7 +61,13 @@ int Configuration::readConfigurationFile(std::string conffile)
 	  else
 		  return ENOENT;
 
-	  properties += props;
+	  // perform a copy...  i.e. read 'props' values will overwrite
+	  // any existing properties of a particular key
+	  for( auto &it : props )
+	  {
+		  properties[it.first] = it.second;
+	  }
+
 	  return 0;
 }
 
@@ -142,7 +148,11 @@ void Configuration::dumpProperties( void )
 
 /* Static Methods */
 
-void kcmsg::mapProperties( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, const boost::property_tree::ptree pt, std::unordered_map<std::string,kcmsg::Property> props ) {
+void mapProperties( std::vector<std::string> kp,
+	                std::vector<std::string> vp,
+	    		    std::vector<uint> num,
+					const boost::property_tree::ptree pt,
+					std::unordered_map<std::string,kcmsg::Property> props ) {
 	int i;
 
 	for (boost::property_tree::ptree::const_iterator it = pt.begin();
@@ -184,7 +194,10 @@ void kcmsg::mapProperties( std::vector<std::string> kp, std::vector<std::string>
 	}
 }
 
-void kcmsg::insertProperty( std::vector<std::string> kp, std::vector<std::string> vp, std::vector<uint> num, 	  std::unordered_map<std::string,kcmsg::Property> props )
+void insertProperty( std::vector<std::string> kp,
+		             std::vector<std::string> vp,
+					 std::vector<uint> num,
+					 std::unordered_map<std::string,kcmsg::Property> props )
 {
 	std::string key;
 
@@ -211,7 +224,7 @@ void kcmsg::insertProperty( std::vector<std::string> kp, std::vector<std::string
 	}
 }
 
-void kcmsg::debugPrintPropertyTree( boost::property_tree::ptree pt )
+void debugPrintPropertyTree( boost::property_tree::ptree pt )
 {
 	for (boost::property_tree::ptree::const_iterator it = pt.begin();
 			it != pt.end(); it++) {

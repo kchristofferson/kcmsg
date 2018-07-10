@@ -8,9 +8,9 @@
 #ifndef KCMSG_H_
 #define KCMSG_H_
 
+#include <kcmsg/NetworkInterface.h>
 #include <kcmsg/Configuration.h>
 #include <kcmsg/Connection.h>
-// #include <kcmsg/Daemon.h>
 #include <kcmsg/Message.h>
 #include <kcmsg/Property.h>
 
